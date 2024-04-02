@@ -17,6 +17,16 @@ class RECORD:
     def print(self):
         print(self.history)
 
+    def convert_to_csv(self, filename):
+        with open(filename, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['Character', 'Press-Release Pairs'])
+            for char, times in self.history.items():
+                row = [char]
+                for press_time, release_time in times:
+                    row.append((press_time, release_time))
+                writer.writerow(row)
+
 class RECORD_HANDLER:
     def __init__(self, bindings):
         self.is_recording = False
@@ -52,17 +62,23 @@ class RECORD_HANDLER:
             self.record.print()
             return False
         if char == self.bindings["begin_recording"]:
+            print("Starting recording...")
             self.reset()
             self.is_recording = True
             return False
         if char == self.bindings["stop_recording"]:
+            print("Recording stopped...")
             self.is_recording = False
+            return False
+        if char == self.bindings["save_recording"]:
+            print("Saving...")
+            self.record.convert_to_csv("test.csv")
             return False
         return self.is_recording
 
 class MASTER:
     def __init__(self):
-        self.bindings = {"print" : 'q', "begin_recording" : 'w', "stop_recording" : 'e'}
+        self.bindings = {"print" : 'q', "begin_recording" : 'w', "stop_recording" : 'e',"save_recording" : 'r'}
         self.record_handler = RECORD_HANDLER(self.bindings)
 
     def on_press(self, key):
