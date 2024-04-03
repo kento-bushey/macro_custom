@@ -41,6 +41,8 @@ class RECORD_HANDLER:
         self.start_time = time.time()
 
     def on_press(self, key):
+        if not self.record.history:
+            self.reset()
         current_time = time.time() - self.start_time
 
         char = key.char
