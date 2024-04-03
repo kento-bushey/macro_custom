@@ -2,6 +2,31 @@ import sys
 from PyQt5 import QtWidgets, QtGui, QtCore
 import csv
 
+def find_max_value(matrix):
+    if not matrix:
+        return None
+    
+    max_value = matrix[0][0][1]
+    
+    for row in matrix:
+        for value in row:
+            if value[1] > max_value:
+                max_value = value[1]
+                
+    return max_value
+
+def find_insert_index(arr, value):
+    left, right = 0, len(arr) - 1
+
+    while left <= right:
+        mid = (left + right) // 2
+        if arr[mid][0] < value:
+            left = mid + 1
+        else:
+            right = mid - 1
+
+    return left
+
 def sec2time(sec):
     minutes, seconds = divmod(sec, 60)
     hours, minutes = divmod(minutes, 60)
@@ -73,7 +98,7 @@ class Canvas(QtWidgets.QFrame):
     ybuffer = 25
     xbuffer = 50
     track_height = 50
-    scale = 100
+    scale = 200
 
     def __init__(self):
         super().__init__()
@@ -84,7 +109,8 @@ class Canvas(QtWidgets.QFrame):
         self.selected = []
     
     def update_history(self, history, letters):
-        print("Updating history...")
+        self.rect_history = []
+        self.selected = []
         for i in range(len(history)):
             for j in range(len(history[i])):
                 left = history[i][j][0]
@@ -95,6 +121,7 @@ class Canvas(QtWidgets.QFrame):
                 height = self.track_height
                 self.rect_history.append(RECT(i,j,x,y,width,height))
         self.letters = letters
+        self.setMinimumSize(int(self.scale*find_max_value(history))+100, 400)
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
@@ -185,7 +212,7 @@ class MainWindow(QtWidgets.QWidget):
 
         self.start_input = QtWidgets.QLineEdit()
         self.start_input.setMaximumWidth(100)  # Adjust width here
-        self.start_input.setText("00:00.000")  # Set default text here
+        self.start_input.setText("00:00:00.000")  # Set default text here
         start_layout.addWidget(self.start_input)
 
         start_button = QtWidgets.QPushButton("Apply")
@@ -202,14 +229,66 @@ class MainWindow(QtWidgets.QWidget):
 
         self.end_input = QtWidgets.QLineEdit()
         self.end_input.setMaximumWidth(100)  # Adjust width here
-        self.end_input.setText("00:00.000")  # Set default text here
+        self.end_input.setText("00:00:00.000")  # Set default text here
         end_layout.addWidget(self.end_input)
 
         end_button = QtWidgets.QPushButton("Apply")
         end_button.clicked.connect(self.apply_end)
         end_layout.addWidget(end_button)
 
+        #deltion
+        del_layout = QtWidgets.QHBoxLayout()
+        layout.addLayout(del_layout)
+
+        del_button = QtWidgets.QPushButton("Delete")
+        del_button.clicked.connect(self.delete_selected)
+        del_layout.addWidget(del_button)
+
+        #insertion
+        ins_layout = QtWidgets.QHBoxLayout()
+        layout.addLayout(ins_layout)
+
+        self.ins_input = QtWidgets.QLineEdit()
+        self.ins_input.setMaximumWidth(100)
+        ins_layout.addWidget(self.ins_input)
+
+        ins_button = QtWidgets.QPushButton("Insert")
+        ins_button.clicked.connect(self.insert)
+        ins_layout.addWidget(ins_button)
+
         self.canvas.clicked.connect(self.canvas_clicked)
+
+    def reset_clock(self):
+        self.end_input.setText("00:00:00.000")
+        self.start_input.setText("00:00:00.000")
+
+    def insert(self):
+        print("inserting...")
+        start = time2sec( self.start_input.text())
+        end = time2sec(self.end_input.text())
+        letter = self.ins_input.text()
+        if end <=start:
+            print("Invalid start and end time")
+            return
+        row = -1
+        for i in range(len(self.record.history_key)):
+            if self.record.history_key[i] == letter:
+                row = i
+        if row == -1: #letter not found
+            print("Letter not found.")
+            return
+        index = find_insert_index(self.record.history[row],start)
+        self.record.history[row].insert(index,(start,end))
+        self.canvas.update_history(self.record.history, self.record.history_key)
+        self.canvas.update()
+        self.reset_clock()
+
+    def delete_selected(self):
+        if self.curr_row == -1:
+            return
+        self.record.history[self.curr_row].pop(self.curr_col)
+        self.canvas.update_history(self.record.history, self.record.history_key)
+        self.canvas.update()
 
     def reset(self):
         # Clear canvas
@@ -220,8 +299,7 @@ class MainWindow(QtWidgets.QWidget):
         self.record = RECORD()
 
         # Reset input fields
-        self.start_input.setText("00:00.000")
-        self.end_input.setText("00:00.000")
+        self.reset_clock()
 
         # Reset current key
         self.curr_key = (0, 0)
@@ -239,23 +317,26 @@ class MainWindow(QtWidgets.QWidget):
         self.canvas.update()
 
     def apply_start(self):
+        if self.curr_row == -1:
+            return
         start_text = self.start_input.text()
         temp = (time2sec(start_text),self.curr_key[1])
         self.curr_key = temp
         self.record.history[self.curr_row][self.curr_col] = temp
         self.canvas.update_history(self.record.history, self.record.history_key)
         self.canvas.update()
-        self.start_input.setText(sec2time(self.curr_key[0]))
+        self.reset_clock()
 
     def apply_end(self):
+        if self.curr_row == -1:
+            return
         end_text = self.end_input.text()
         temp = (self.curr_key[0],time2sec(end_text))
-        print(f"self.curr_key[0] : {self.curr_key[0]}")
         self.curr_key = temp
         self.record.history[self.curr_row][self.curr_col] = temp
         self.canvas.update_history(self.record.history, self.record.history_key)
         self.canvas.update()
-        self.end_input.setText(sec2time(self.curr_key[1]))
+        self.reset_clock()
 
     def canvas_clicked(self, row, col):
         self.curr_key = self.record.history[row][col]
@@ -263,7 +344,6 @@ class MainWindow(QtWidgets.QWidget):
         release_time = self.curr_key[1]
         self.start_input.setText(sec2time(press_time))
         self.end_input.setText(sec2time(release_time))
-        print(f"press_time : {press_time} , release_time : {release_time}")
         self.curr_row = row
         self.curr_col = col
         self.canvas.update()

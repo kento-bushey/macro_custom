@@ -58,7 +58,6 @@ class RECORD_HANDLER:
                 self.record.record_key_press(char, press_time, current_time)
                 self.keys_pressed.pop(char)
 
-
     def check_binds(self, char):
         if char == self.bindings["print"]:
             self.record.print()
