@@ -1,6 +1,4 @@
-import tkinter as tk
 from pynput import keyboard
-from tkinter import filedialog
 import time
 import csv
 
