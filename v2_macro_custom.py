@@ -39,7 +39,7 @@ class RECORD_HANDLER:
         self.start_time = time.time()
 
     def on_press(self, key):
-        if not self.record.history:
+        if not self.record.history and not self.keys_pressed:
             self.reset()
         current_time = time.time() - self.start_time
 
@@ -77,7 +77,7 @@ class RECORD_HANDLER:
 
 class MASTER:
     def __init__(self):
-        self.bindings = {"print" : 'q', "begin_recording" : 'w', "stop_recording" : 'e',"save_recording" : 'r'}
+        self.bindings = {"print" : '1', "begin_recording" : '2', "stop_recording" : '3',"save_recording" : '4'}
         self.record_handler = RECORD_HANDLER(self.bindings)
 
     def on_press(self, key):
